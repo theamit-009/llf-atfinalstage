@@ -1,0 +1,630 @@
+const express = require('express');
+//const router = express.Router();
+const pool = require('../db/dbConfig');
+const verify = require('../config/verifyToken');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const Router = require('express-promise-router');
+const format = require('pg-format');
+const router = new Router()
+
+
+
+router.get('/',verify, async (request, response) => {
+
+    console.log('Expense request.user '+JSON.stringify(request.user));
+    var userId = request.user.sfid; 
+    var objUser = request.user;
+    console.log('Expense userId : '+userId);
+
+    var objProjectList = [];
+
+    await
+    pool
+  .query('SELECT sfid, Name FROM salesforce.Contact  WHERE sfid = $1;',[userId])
+  .then(contactResult => {
+    console.log('Name of Contact  ::     '+contactResult.rows[0].name+' sfid'+contactResult.rows[0].sfid);
+    var contactId = contactResult.rows[0].sfid;
+      pool
+      .query('SELECT sfid, Name, Team__c FROM salesforce.Team_Member__c WHERE Representative__c = $1 ;',[userId])
+      .then(teamMemberResult => {
+        console.log('Name of TeamMemberId  : '+teamMemberResult.rows[0].name+'   sfid :'+teamMemberResult.rows[0].sfid);
+        console.log('Team Id  : '+teamMemberResult.rows[0].team__c);
+        console.log('Number of Team Member '+teamMemberResult.rows.length);
+        
+        var projectTeamparams = [], lstTeamId = [];
+        for(var i = 1; i <= teamMemberResult.rows.length; i++) {
+          projectTeamparams.push('$' + i);
+          lstTeamId.push(teamMemberResult.rows[i-1].team__c);
+        } 
+        var projectTeamQueryText = 'SELECT sfid, Name, Project__c FROM salesforce.Project_Team__c WHERE Team__c IN (' + projectTeamparams.join(',') + ')';
+        console.log('projectTeamQueryText '+projectTeamQueryText);
+        
+          pool
+          .query(projectTeamQueryText,lstTeamId)
+          .then((projectTeamResult) => {
+              console.log('projectTeam Reocrds Length '+projectTeamResult.rows.length);
+              console.log('projectTeam Name '+projectTeamResult.rows[0].name);
+
+              var projectParams = [], lstProjectId = [];
+              for(var i = 1; i <= projectTeamResult.rows.length; i++) {
+                projectParams.push('$' + i);
+                lstProjectId.push(projectTeamResult.rows[i-1].project__c);
+              } 
+              console.log('lstProjectId  : '+lstProjectId);
+              var projetQueryText = 'SELECT sfid, Name FROM salesforce.Milestone1_Project__c WHERE sfid IN ('+ projectParams.join(',')+ ')';
+
+              pool.
+              query(projetQueryText, lstProjectId)
+              .then((projectQueryResult) => { 
+                    console.log('Number of Projects '+projectQueryResult.rows.length);
+                    console.log('Project sfid '+projectQueryResult.rows[0].sfid+ 'Project Name '+projectQueryResult.rows[0].name);
+                    var projectList = projectQueryResult.rows;
+                    objProjectList = projectQueryResult.rows;
+                    var lstProjectId = [], projectParams = [];
+                    var j = 1;
+                    projectList.forEach((eachProject) => {
+                      console.log('eachProject sfid : '+eachProject.sfid);
+                      lstProjectId.push(eachProject.sfid);
+                      projectParams.push('$'+ j);
+                      console.log('eachProject name : '+eachProject.name);
+                      j++;
+                    });
+
+
+                  var taskQueryText = 'SELECT sfid, Name FROM salesforce.Milestone1_Task__c  WHERE Project_Name__c IN ('+projectParams.join(',')+') AND  Project_Milestone__c IN (SELECT sfid FROM salesforce.Milestone1_Milestone__c WHERE Name = \'Timesheet Category\') AND sfid IS NOT NULL';
+                  console.log('taskQueryText  : '+taskQueryText);
+
+
+
+                    pool
+                    .query(taskQueryText, lstProjectId)
+                    .then((taskQueryResult) => {
+                        console.log('taskQueryResult  rows '+taskQueryResult.rows.length);
+                       // response.send({projectList : projectQueryResult.rows, contactList : contactResult.rows, taskList : taskQueryResult.rows }); // render calendar
+                    })
+                    .catch((taskQueryError) => {
+                        console.log('taskQueryError : '+taskQueryError.stack);
+                       // response.send({projectList : projectQueryResult.rows, contactList : contactResult.rows, taskList : taskQueryResult.rows }); // render calendar
+                    })
+                    
+              })
+              .catch((projectQueryError) => {
+                    console.log('projectQueryError '+projectQueryError.stack);
+              })
+           
+          })
+            .catch((projectTeamQueryError) =>{
+              console.log('projectTeamQueryError : '+projectTeamQueryError.stack);
+            })          
+        })
+        .catch((teamMemberQueryError) => {
+        console.log('Error in team member query '+teamMemberQueryError.stack);
+        })
+
+      }) 
+      .catch(contactQueryError => console.error('Error executing contact query', contactQueryError.stack));
+
+
+    await
+    pool
+    .query('SELECT id, sfid, Name , Project_Name__c, Approval_Status__c, Amount_Claimed__c, petty_cash_amount__c, Conveyance_Amount__c, Tour_bill_claim_Amount__c FROM salesforce.Milestone1_Expense__c WHERE Incurred_By_Heroku_User__c = $1 AND sfid != \'\'',[userId])
+    .then((expenseQueryResult) => {
+        console.log('expenseQueryResult   : '+JSON.stringify(expenseQueryResult.rows));
+            if(expenseQueryResult.rowCount > 0)
+            {
+                console.log('expenseQueryResult   : '+JSON.stringify(expenseQueryResult.rows));
+                var projectIDs = [], projectIDparams = [];
+                for(let i =1 ;i <= expenseQueryResult.rowCount ; i++)
+                {
+                    console.log('Inside For Loop ');
+                    projectIDs.push(expenseQueryResult.rows[i-1].project_name__c);
+                    projectIDparams.push('$'+i);
+                }
+
+                let projectQueryText = 'SELECT id, sfid , name FROM salesforce.Milestone1_Project__c WHERE sfid IN ( '+projectIDparams.join(',')+' )';
+                console.log('projectQueryText  : '+projectQueryText);
+
+                pool
+                .query(projectQueryText,projectIDs)
+                .then((projectQueryResult) => {
+                    console.log('projectQueryResult  : '+JSON.stringify(projectQueryResult.rows));
+                })
+                .catch((projectQueryError) => {
+                    console.log('projectQueryError   : '+projectQueryError.stack);
+                })
+                response.render('expense.ejs',{objUser : objUser, name : request.user.name, email : request.user.email, expenseList : expenseQueryResult.rows, projectList : objProjectList});
+            }
+            else
+            {
+                response.render('expense.ejs',{objUser: objUser, name : request.user.name, email : request.user.email, expenseList : expenseQueryResult.rows, projectList : objProjectList});
+            }
+    })
+    .catch((expenseQueryError) => {
+        console.log('expenseQueryError   '+expenseQueryError.stack);
+        response.send(403);
+    })
+  
+});
+
+
+router.get('/expense-allrecords', async(request, response) => {
+
+})
+
+
+
+router.post('/createExpense',(request, response) => {
+
+   // var {expenseName, projectName} = request.body;
+    console.log('request.body  '+JSON.stringify(request.body));
+
+   const {taskname,projectname ,department, designation, employeeId, empCategory, approvalStatus, incurredBy} = request.body;
+   console.log('taskname  '+taskname);
+   console.log('projectname  '+projectname);
+   console.log('department  '+department);
+   console.log('designation  '+designation);
+   console.log('employeeId  '+employeeId);
+   console.log('empCategory  '+empCategory);
+   console.log('approvalStatus  '+approvalStatus);
+   console.log('incurredBy  '+incurredBy);
+
+   pool
+   .query('INSERT INTO salesforce.Milestone1_Expense__c (name,project_name__c,department__c,designation__c,Conveyance_Voucher_Employee_ID__c,Conveyance_Employee_Category_Band__c,Incurred_By_Heroku_User__c) values ($1,$2,$3,$4,$5,$6,$7)',[taskname,projectname,department,designation,employeeId,empCategory,incurredBy])
+   .then((expenseInsertResult) => {     
+            console.log('expenseInsertResult.rows '+JSON.stringify(expenseInsertResult.rows));
+            response.send('Success');
+   })
+   .catch((expenseInsertError) => {
+        console.log('expenseInsertError   '+expenseInsertError.stack);
+        response.send('Error');
+   })
+ 
+});
+
+router.get('/saved-expense-details',verify, async (request, response) => {
+
+  let finaResponse = {};
+  console.log('Expense request.user '+JSON.stringify(request.user));
+  let objUser = request.user;
+  finaResponse.objUser = objUser;
+
+
+  let expenseId = request.query.expenseId;
+  console.log('Hurrah expenseId '+expenseId);
+  let expenseQueryText = 'SELECT id,sfid,Name, Project_Name__c, Department__c, Designation__c, '+
+    'Conveyance_Voucher_Employee_ID__c,Conveyance_Employee_Category_Band__c,'+
+    'Approval_Status__c, Amount_Claimed__c, Tour_bill_claim_Amount__c, petty_cash_amount__c, Conveyance_Amount__c '+
+    'FROM salesforce.Milestone1_Expense__c WHERE sfid = $1';
+
+  await
+  pool
+  .query(expenseQueryText,[expenseId])
+  .then((expenseQueryResult) => {
+      if(expenseQueryResult.rowCount > 0)
+      {
+        finaResponse.expenseDetails = expenseQueryResult.rows[0];
+       
+      }   
+      else
+        response.send({});
+  })
+  .catch((expenseQueryError) => {
+        console.log('expenseQueryError  '+expenseQueryError.stack);
+        response.send({});
+  })
+
+  await
+  pool
+  .query('SELECT sfid, Name, Team__c FROM salesforce.Team_Member__c WHERE Representative__c = $1 ;',[objUser.sfid])
+  .then(teamMemberResult => {
+    console.log('Name of TeamMemberId  : '+teamMemberResult.rows[0].name+'   sfid :'+teamMemberResult.rows[0].sfid);
+    console.log('Team Id  : '+teamMemberResult.rows[0].team__c);
+    console.log('Number of Team Member '+teamMemberResult.rows.length);
+
+    var projectTeamparams = [], lstTeamId = [];
+    for(var i = 1; i <= teamMemberResult.rows.length; i++) {
+      projectTeamparams.push('$' + i);
+      lstTeamId.push(teamMemberResult.rows[i-1].team__c);
+    } 
+    var projectTeamQueryText = 'SELECT sfid, Name, Project__c FROM salesforce.Project_Team__c WHERE Team__c IN (' + projectTeamparams.join(',') + ')';
+    console.log('projectTeamQueryText '+projectTeamQueryText);
+    
+      pool
+      .query(projectTeamQueryText,lstTeamId)
+      .then((projectTeamResult) => {
+          console.log('projectTeam Reocrds Length '+projectTeamResult.rows.length);
+          console.log('projectTeam Name '+projectTeamResult.rows[0].name);
+
+          var projectParams = [], lstProjectId = [];
+          for(var i = 1; i <= projectTeamResult.rows.length; i++) {
+            projectParams.push('$' + i);
+            lstProjectId.push(projectTeamResult.rows[i-1].project__c);
+          } 
+          console.log('lstProjectId  : '+lstProjectId);
+          let projetQueryText = 'SELECT sfid, Name FROM salesforce.Milestone1_Project__c WHERE sfid IN ('+ projectParams.join(',')+ ')';
+
+          pool.query(projetQueryText, lstProjectId)
+          .then((projectQueryResult) => { 
+                console.log('Number of Projects '+projectQueryResult.rows.length);
+                finaResponse.projectList = projectQueryResult.rows;
+                response.send(finaResponse);
+           })
+          .catch((projectQueryError) => {
+
+           })
+        })   
+       .catch((projectTeamQueryError)=> {
+
+       })
+    })
+    .catch((teamMemberQueryError) => {
+
+    })
+
+
+});
+
+router.post('/update-expense',verify,(request, response) => {
+
+  console.log('Expense request.user '+JSON.stringify(request.user));
+  let objUser = request.user;
+ 
+
+    let formBody = request.body;
+    console.log('formBody  :'+JSON.stringify(formBody));
+    const {taskname,projectname ,department, designation, employeeId, empCategory, approvalStatus, incurredBy, expenseId} = request.body;
+   console.log('taskname  '+taskname);
+   console.log('projectname  '+projectname);
+   console.log('department  '+department);
+   console.log('designation  '+designation);
+   console.log('employeeId  '+employeeId);
+   console.log('empCategory  '+empCategory);
+   console.log('approvalStatus  '+approvalStatus);
+   console.log('incurredBy  '+incurredBy);
+   console.log('expense Id '+expenseId);
+
+   let updateExpenseQuery = 'UPDATE salesforce.Milestone1_Expense__c SET '+
+                             'name = \''+taskname+'\', '+
+                             'project_name__c = \''+projectname+'\' , '+
+                             'department__c = \''+department+'\' , '+
+                             'designation__c = \''+designation+'\', '+
+                             'Conveyance_Voucher_Employee_ID__c = \''+employeeId+'\' ,'+
+                             'Conveyance_Employee_Category_Band__c = \''+empCategory+'\' ,'+
+                             'Incurred_By_Heroku_User__c  = \''+incurredBy+'\' '+
+                             'WHERE sfid = $1';
+  console.log('updateExpenseQuery  '+updateExpenseQuery);
+
+   pool
+   .query(updateExpenseQuery,[expenseId])
+   .then((expenseInsertResult) => {     
+            console.log('expenseInsertResult.rows '+JSON.stringify(expenseInsertResult.rows));
+            response.send('Success');
+   })
+   .catch((expenseInsertError) => {
+        console.log('expenseInsertError   '+expenseInsertError.stack);
+        response.send('Error');
+   })
+
+});
+
+router.get('/details', async (request, response) => {
+
+    var expenseId = request.query.expenseId;
+    console.log('Hurrah expenseId '+expenseId);
+
+    var expenseQueryText = 'SELECT id,sfid,Name, Project_Name__c, Department__c, Designation__c, '+
+    'Conveyance_Voucher_Employee_ID__c,Conveyance_Employee_Category_Band__c,'+
+    'Approval_Status__c, Amount_Claimed__c, Tour_bill_claim_Amount__c, petty_cash_amount__c, Conveyance_Amount__c '+
+    'FROM salesforce.Milestone1_Expense__c WHERE sfid = $1';
+
+
+    var pettyCashQueryText = 'SELECT id, sfid, name, Activity_Code__c, Bill_No__c, Bill_Date__c,Nature_of_exp__c, Amount__c FROM salesforce.Petty_Cash_Expense__c WHERE Expense__c = $1';
+    var conveyanceQueryText = 'SELECT id, sfid, Name, Amount__c, Mode_of_Conveyance__c, From__c FROM salesforce.Conveyance_Voucher__c WHERE Expense__c = $1';
+    var tourBillClaimQueryText = 'SELECT id, sfid, Name, Grand_Total__c FROM salesforce.Tour_Bill_Claim__c WHERE Expense__c = $1 ';
+    
+    var objData =  {};
+
+    try{
+
+        await pool.query(expenseQueryText,[expenseId])
+        .then((expenseQueryResult) => {
+                console.log('Expense Result '+JSON.stringify(expenseQueryResult.rows));
+                objData.Expense = expenseQueryResult.rows;
+        })
+        .catch(expenseQueryError => console.log('expenseQueryError   :'+expenseQueryError.stack))
+
+  
+        await pool.query(pettyCashQueryText,[expenseId])
+        .then(pettyCashQueryResult => {console.log('Petty Cash Result '+JSON.stringify(pettyCashQueryResult.rows))
+                objData.PettyCash = pettyCashQueryResult.rows;
+        })
+        .catch(pettyCashQueryError => console.log('pettyCashQueryError  : '+pettyCashQueryError.stack))
+        
+        await pool.query(conveyanceQueryText,[expenseId])
+        .then((conveyanceQueryResult) => {
+                console.log('Conveyance Result '+JSON.stringify(conveyanceQueryResult.rows));
+                objData.Conveyance = conveyanceQueryResult.rows;
+        })
+        .catch(conveyanceQueryError => console.log('conveyanceQueryError   :'+conveyanceQueryError.stack))
+
+        await pool.query(tourBillClaimQueryText,[expenseId])
+        .then((tourBillClaimResult) => {
+            console.log('Tour BillClaim Result '+JSON.stringify(tourBillClaimResult.rows));
+            objData.TourBillClaim = tourBillClaimResult.rows;
+        })
+        .catch(tourBillClaimQueryError => console.log('tourBillClaimQueryError   :'+tourBillClaimQueryError.stack))
+      
+       
+    }
+    catch(err){
+        console.log('error async await '+err);
+    }
+
+    console.log('objData '+JSON.stringify(objData));
+    response.send(objData);
+});
+
+
+
+
+var storage = multer.diskStorage({
+  filename: function(req, file, callback) {
+    callback(null, Date.now() + file.originalname);
+  }
+});
+
+var imageFilter = function (req, file, cb) {
+    // accept image files only
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif|PNG|JPG|GIF)$/i)) {
+        return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+};
+
+console.log('process.env.CLOUD_NAME  : '+process.env.CLOUD_NAME);
+console.log('process.env.API_ID  : '+process.env.API_ID);
+console.log('process.env.API_SECRET  : '+process.env.API_SECRET);
+
+var upload = multer({ storage: storage, fileFilter: imageFilter})
+cloudinary = require('cloudinary').v2;
+cloudinary.config({ 
+  cloud_name: process.env.CLOUD_NAME, 
+  api_key: process.env.API_ID, 
+  api_secret: process.env.API_SECRET
+}); 
+
+
+router.get('/pettyCash/:parentExpenseId',verify,(request, response) => {
+
+  var parentExpenseId = request.params.parentExpenseId;
+  console.log('parentExpenseId  '+parentExpenseId);
+  console.log('Expense request.user '+JSON.stringify(request.user));
+  var userId = request.user.sfid; 
+  var objUser = request.user;
+  console.log('Expense userId : '+userId);
+
+  response.render('pettycash',{name:request.user.name, email:request.user.email, parentExpenseId:parentExpenseId });
+});
+
+
+
+router.post('/savePettyCashForm', (request, response) => {
+
+    console.log('Body Result '+JSON.stringify(request.body));  
+    console.log('Now For Each   lllllllllLoop !');
+    console.log('Hello Work done !');
+
+    let numberOfRows,lstPettyCash = [];
+    if(typeof(request.body.bill_no) == 'object')
+    {
+         numberOfRows = request.body.bill_no.length;
+          for(let i=0; i< numberOfRows ; i++)
+          {
+              let pettyCashValues = [];
+              pettyCashValues.push(request.body.bill_no[i]);
+              pettyCashValues.push(request.body.bill_date[i]);
+              pettyCashValues.push(request.body.activity_code[i]);
+              pettyCashValues.push(request.body.desc[i]);
+              pettyCashValues.push(request.body.nature_exp[i]);
+              pettyCashValues.push(request.body.amount[i]);
+              pettyCashValues.push(request.body.imgpath[i]);
+              pettyCashValues.push(request.body.parentExpenseId[i]);
+              lstPettyCash.push(pettyCashValues);
+              
+          }    
+          console.log('lstPettyCash  '+JSON.stringify(lstPettyCash));
+    }
+    else
+    {
+        numberOfRows = 1;
+        for(let i=0; i< numberOfRows ; i++)
+        {
+            let pettyCashValues = [];
+            pettyCashValues.push(request.body.bill_no);
+            pettyCashValues.push(request.body.bill_date);
+            pettyCashValues.push(request.body.activity_code);
+            pettyCashValues.push(request.body.desc);
+            pettyCashValues.push(request.body.nature_exp);
+            pettyCashValues.push(request.body.amount);
+            pettyCashValues.push(request.body.imgpath);
+            pettyCashValues.push(request.body.parentExpenseId);
+            lstPettyCash.push(pettyCashValues);
+            
+        }    
+        console.log('lstPettyCash  '+JSON.stringify(lstPettyCash));
+    }
+    
+    
+    let pettyCashInsertQuery = format('INSERT INTO salesforce.Petty_Cash_Expense__c (bill_no__c, bill_date__c,activity_Code__c,description_of_activity_expenses__c,nature_of_exp__c,amount__c,heroku_image_url__c,expense__c) VALUES %L returning id', lstPettyCash);
+
+    pool.query(pettyCashInsertQuery)
+    .then((pettyCashQueryResult) => {
+        console.log('pettyCashQueryResult  '+JSON.stringify(pettyCashQueryResult.rows));
+        response.send('Saved Data Succesfully !');
+    })
+    .catch((pettyCashQueryError) => {
+      console.log('pettyCashQueryError  '+pettyCashQueryError);
+      response.send('Error Occured !');
+    })
+});
+
+router.post('/uploadImage',upload.any(),async (request, response) => {
+
+    console.log('uploadImage  Called !');
+    console.log('request.files[0].path   '+request.files[0].path);
+    try{
+    cloudinary.uploader.upload(request.files[0].path, function(error, result) {
+ 
+        if(error){
+          console.log('cloudinary  error' + error);
+        }
+        console.log('cloudinary result '+JSON.stringify(result));
+        response.send(result);
+      });
+   }
+   catch(Ex)
+   {
+        console.log('Exception '+ex);
+        console.log('Exception '+JSON.stringify(ex));
+   }
+});
+
+
+
+router.get('/conveyanceVoucher/:parentExpenseId',verify,(request, response) => {
+
+  var parentExpenseId = request.params.parentExpenseId;
+  console.log('conveyanceVoucher parentExpenseId '+parentExpenseId);
+  console.log('Expense request.user '+JSON.stringify(request.user));
+  var userId = request.user.sfid; 
+  var objUser = request.user;
+  console.log('Expense userId : '+userId);
+
+  response.render('conveyanceVoucher',{name:request.user.name, email:request.user.email, parentExpenseId: parentExpenseId });
+
+});
+
+router.post('/conveyanceform',(request,response) => {  
+
+    console.log('conveyanceform Body Result  : '+JSON.stringify(request.body));
+
+    let numberOfRows ,lstConveyance = [];
+    if(typeof(request.body.from) == 'object')
+    {
+        numberOfRows = request.body.from.length;
+        for(let i=0; i<numberOfRows ; i++)
+        {
+            let conveyanceValues = [];
+            conveyanceValues.push(request.body.from[i]);
+            conveyanceValues.push(request.body.to[i]);
+            conveyanceValues.push(request.body.activity_code[i]);
+            conveyanceValues.push(request.body.purposeoftravel[i]);
+            conveyanceValues.push(request.body.modeofconveyance[i]);
+            conveyanceValues.push(request.body.kmtravelled[i]);
+            conveyanceValues.push(request.body.amount[i]);
+            conveyanceValues.push(request.body.imgpath[i]);
+            conveyanceValues.push(request.body.parentExpenseId[i]);
+            lstConveyance.push(conveyanceValues);
+        }   
+        console.log('lstConveyance   : '+lstConveyance);
+    }
+    else
+    {
+        numberOfRows = 1;
+        for(let i=0; i<numberOfRows ; i++)
+        {
+            let conveyanceValues = [];
+            conveyanceValues.push(request.body.from);
+            conveyanceValues.push(request.body.to);
+            conveyanceValues.push(request.body.activity_code);
+            conveyanceValues.push(request.body.purposeoftravel);
+            conveyanceValues.push(request.body.modeofconveyance);
+            conveyanceValues.push(request.body.kmtravelled);
+            conveyanceValues.push(request.body.amount);
+            conveyanceValues.push(request.body.imgpath);
+            conveyanceValues.push(request.body.parentExpenseId);
+            lstConveyance.push(conveyanceValues);
+        }   
+        console.log('lstConveyance   : '+lstConveyance);
+    }
+
+    
+    
+    let conveyanceVoucherInsertQuery = format('INSERT INTO salesforce.Conveyance_Voucher__c (From__c, To__c,Activity_Code__c, Purpose_of_Travel__c,Mode_of_Conveyance__c,Kms_Travelled__c,Amount__c,Heroku_Image_URL__c, Expense__c) VALUES %L returning id', lstConveyance);
+    pool.query(conveyanceVoucherInsertQuery)
+    .then((conveyanceQueryResult) => {
+        console.log('conveyanceQueryResult :  '+JSON.stringify(conveyanceQueryResult.rows));
+        response.send('Conveyance Saved Successfully !');
+    })
+    .catch((conveyanceQueryError) => {
+      console.log('conveyanceQueryError  '+conveyanceQueryError);
+      response.send('Error Occured !');
+    })
+
+    
+
+});
+
+
+router.get('/addExpense', (request, response) => {
+    response.render('expenseAddEditForm');
+});
+
+
+router.get('/activityCodes',async (request, response) => {
+
+    let parentExpenseId = request.query.parentExpenseId;
+    console.log('parentExpenseId   : '+parentExpenseId);
+    let projectId = '';
+
+    await
+    pool.query('SELECT project_name__c FROM salesforce.milestone1_expense__c WHERE sfid= $1',[parentExpenseId])
+    .then((expenseQueryResult) => {
+        console.log('expenseQueryResult  '+JSON.stringify(expenseQueryResult.rows));
+        if(expenseQueryResult.rowCount > 0)
+              projectId = expenseQueryResult.rows[0].project_name__c;
+    })
+    .catch((expenseQueryError)=> {
+        console.log('expenseQueryError  '+expenseQueryError.stack);
+    })
+
+    console.log('projectId  :  '+projectId);
+    await
+    pool
+    .query('SELECT sfid, name FROM salesforce.Milestone1_Milestone__c WHERE Project__c = $1 AND name != \'Timesheet Category\'',[projectId])
+    .then((projectTaskCategoryResult) => {
+            console.log('projectTaskCategoryResult   '+JSON.stringify(projectTaskCategoryResult.rows));
+            
+            if(projectTaskCategoryResult.rowCount > 0)
+            {
+                var milestoneIds = [], milestoneIdParams = [];
+                for(let i= 0; i< projectTaskCategoryResult.rows.length ; i++)
+                {
+                    milestoneIds.push(projectTaskCategoryResult.rows[i].sfid);
+                    milestoneIdParams.push('$'+(i+1));      
+                }
+            }
+
+            var taskQueryText =  'SELECT sfid, name , Activity_Code__c FROM salesforce.Milestone1_Task__c WHERE Project_Milestone__c IN ('+milestoneIdParams.join(',')+')';
+            console.log('taskQueryText   '+taskQueryText);
+            pool
+            .query(taskQueryText,milestoneIds)
+            .then((taskQueryResult) => {    
+                    console.log('taskQueryResult  '+JSON.stringify(taskQueryResult.rows));
+                    response.send(taskQueryResult.rows);
+            })
+            .catch((taskQueryError) => {
+                console.log('taskQueryError   : '+taskQueryError.stack);
+                response.send(500);
+            })
+
+    })
+    .catch((projectTaskCategoryError) => {
+        console.log('projectTaskCategoryError   '+projectTaskCategoryError.stack);
+        response.send(500);
+    })
+    
+});
+
+module.exports = router;
