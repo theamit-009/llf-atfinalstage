@@ -8,7 +8,17 @@ const Router = require('express-promise-router');
 const format = require('pg-format');
 const router = new Router()
 
+router.get('/testQuery',(resquest, response) => {
 
+  pool.query('SELECT exp.sfid, exp.Name , exp.Project_Name__c, pro.name FROM salesforce.Milestone1_Expense__c as exp JOIN salesforce.Milestone1_Project__c as pro ON exp.Project_name__c = pro.sfid')
+  .then((testQueryResult) => {
+      response.send(testQueryResult.rows);
+  })
+  .catch((testQueryError) => {
+    response.send(testQueryError.stack);
+  })
+
+});
 
 router.get('/',verify, async (request, response) => {
 
@@ -17,7 +27,7 @@ router.get('/',verify, async (request, response) => {
     var objUser = request.user;
     console.log('Expense userId : '+userId);
 
-    var objProjectList = [];
+    /* var objProjectList = [];
 
     await
     pool
@@ -143,12 +153,67 @@ router.get('/',verify, async (request, response) => {
     .catch((expenseQueryError) => {
         console.log('expenseQueryError   '+expenseQueryError.stack);
         response.send(403);
-    })
+    }) */
+
+    response.render('expense.ejs',{objUser : objUser, name : request.user.name, email : request.user.email});
   
 });
 
 
-router.get('/expense-allrecords', async(request, response) => {
+router.get('/expenseAllRecords',verify, async (request, response) => {
+
+  let objUser = request.user;
+  console.log('objUser   : '+JSON.stringify(objUser));
+
+  pool
+  .query('SELECT id, sfid, Name , Project_Name__c, Approval_Status__c, Amount_Claimed__c, petty_cash_amount__c, Conveyance_Amount__c, Tour_bill_claim_Amount__c,createddate FROM salesforce.Milestone1_Expense__c WHERE Incurred_By_Heroku_User__c = $1 AND sfid != \'\'',[objUser.sfid])
+  .then((expenseQueryResult) => {
+      console.log('expenseQueryResult   : '+JSON.stringify(expenseQueryResult.rows));
+          if(expenseQueryResult.rowCount > 0)
+          {
+              console.log('expenseQueryResult   : '+JSON.stringify(expenseQueryResult.rows));
+              var projectIDs = [], projectIDparams = [];
+              for(let i =1 ;i <= expenseQueryResult.rowCount ; i++)
+              {
+                  console.log('Inside For Loop ');
+                  projectIDs.push(expenseQueryResult.rows[i-1].project_name__c);
+                  projectIDparams.push('$'+i);
+              }
+
+              let expenseList = [];
+              for(let i=0 ; i < expenseQueryResult.rows.length; i++)
+              {
+                let obj = {};
+                let crDate = new Date(expenseQueryResult.rows[i].createddate);
+               // crDate = crDate.setHours(crDate.getHours() + 5);
+               // crDate = crDate.setMinutes(crDate.getMinutes() + 30);
+                let strDate = crDate.toLocaleString();
+                obj.sequence = i+1;
+                obj.name = '<a href="'+expenseQueryResult.rows[i].sfid+'" data-toggle="modal" data-target="#popup" class="expId" id="" >'+expenseQueryResult.rows[i].name+'</a>';
+                obj.projectName = expenseQueryResult.rows[i].project_name__c;
+                obj.approvalStatus = expenseQueryResult.rows[i].approval_status__c;
+                obj.totalAmount = expenseQueryResult.rows[i].amount_claimed__c;
+                obj.pettyCashAmount = expenseQueryResult.rows[i].petty_cash_amount__c;
+                obj.conveyanceVoucherAmount = expenseQueryResult.rows[i].conveyance_amount__c;
+                obj.tourBillAmount = expenseQueryResult.rows[i].tour_bill_claim_amount__c;
+                obj.createdDate = strDate;
+                obj.editButton = '<a href="#"  data-toggle="modal" data-target="#popupEdit" class="btn btn-primary expIdEditMode"  style="color:white;" id="'+expenseQueryResult.rows[i].sfid+'" >Edit</a>'
+                expenseList.push(obj);
+              }
+
+
+          
+              response.send({objUser : objUser, name : request.user.name, email : request.user.email, expenseList : expenseList});
+          }
+          else
+          {
+              response.send({objUser: objUser, name : request.user.name, email : request.user.email, expenseList : []});
+          }
+  })
+  .catch((expenseQueryError) => {
+      console.log('expenseQueryError   '+expenseQueryError.stack);
+      response.send({});
+  })
 
 })
 

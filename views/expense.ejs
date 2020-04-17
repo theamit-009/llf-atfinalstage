@@ -158,20 +158,35 @@
     <div class="container">
         <section>
                 
-            <div class="row">
-                    <form class="container-fluid bg-gray">
-                            <div class="form-row mb-4 col-10 mx-auto">
-                                    <div class="col form-inline" >
-                                        <input class="form-control form-control-sm mr-3 w-75" type="text" placeholder="Search"
-                                            aria-label="Search"> 
-                                    </div>
-                                    <div class="col">
-                                        <button class="btn btn-primary btn-block bg-gray" type="button" id="createNewExpenseButton">Create New Expense</button>
-                                    </div>
+                
+
+                    <div class="row mt-5 mb-3 align-items-center">
+                        <div class="col-md-5">
+                            <button class="btn btn-primary btn-md bg-gray"  id="createNewExpenseButton">Create New Expense</button>
+                            <button class="btn btn-primary btn-md" id="refresh">Refresh</button>
+                        </div>
+                        <div class="col-md-3">
+                          <input type="text" class="form-control" placeholder="Search in table..." id="searchField">
+                        </div>
+                        <div class="col-md-2 text-right">
+                          <span class="pr-3">Rows Per Page:</span>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="d-flex justify-content-end">
+                                <select class="custom-select" name="rowsPerPage" id="changeRows">
+                                    <option value="1">1</option>
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                    <option value="15">15</option>
+                                </select>
                             </div>
-                    </form>
-                <div class="col-10 mx-auto table-responsive  table-wrap">
-                    <table class="table">
+                        </div>
+                    </div>
+                <div class=" table-responsive  table-wrap" id="rootExpenseTable">
+                    <div id="spinner">
+                        <center> <img src="/spinner-gif-transparent-background-14.gif" />  </center>
+                     </div>
+                   <!--  <table class="table" id="allExpenseRecordsTableId">
                         <thead>
                             <tr>
                                 <th>Expense Name</th>
@@ -185,24 +200,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <% if(expenseList.length > 0) { %>
-                            <% expenseList.forEach(function(eachExpense) { %>
-                                <tr>
-                                        <td><a href="<%= eachExpense.sfid %>" data-toggle="modal" data-target="#popup" class="expId" id="" ><%= eachExpense.name %></a></td>
-                                         <!-- <td><%= eachExpense.project_name__c %></td> -->
-                                        <td>Project 6</td> 
-                                        <td><%= eachExpense.approval_status__c %></td>
-                                        <td><%= eachExpense.amount_claimed__c %></td>
-                                        <td><%= eachExpense.petty_cash_amount__c %></td>
-                                        <td><%= eachExpense.conveyance_amount__c %></td>
-                                        <td><%= eachExpense.tour_bill_claim_amount__c %></td>
-                                        <td><a href="#"  data-toggle="modal" data-target="#popupEdit" class="btn btn-primary expIdEditMode"  style="color:white;" id="<%= eachExpense.sfid %>" >Edit</a></td>
-                                </tr>
-                            <% }) %>
-                            <% }%>
+                          
                            
                         </tbody>
-                    </table>
+                      </table> -->
+                  </div>
                     <div class="modal fade" id="popup">
                         <div class="modal-dialog modal-lg">
                             <div class="modal-content">
@@ -228,6 +230,10 @@
                            <!-- Particular Expense Details -->
                                 <table id="expenseTable" class="table table-hover striped">
                                         <!-- Inside code is handled by Jquery to add dyanamic Content -->
+                                <div id="expenseDetailsSpinner">
+                                            <center> <img src="/spinner-gif-transparent-background-14.gif" />  </center>
+                                 </div>
+                                    
                                 </table>
                             <!-- Particular Expense Details-->
                         </div>
@@ -330,8 +336,8 @@
                         </div>
                     </div>
 
-                </div>
-            </div>
+               
+
         </section>
     </div>
 </div>
@@ -361,11 +367,7 @@
                     <div class="col-md-6">
                       <label for="validationTooltip03">Project Name</label>
                       <select class="custom-select custom-select-sm form-control" name="projectname">
-                        <% if(projectList.length != 0) { %>
-                         <% projectList.forEach((eachProject) => { %>
-                         <option selected value="<%= eachProject.sfid %>" ><%= eachProject.name %></option>
-                         <% }) %>
-                        <% } %>
+                        
                      </select>
                     </div>
                   </div>
@@ -448,8 +450,9 @@
 
             <!-- Body -->
             <div class="modal-body" id="expenseEditModalBody">
-                <h5>Hello Expense Edit </h5>
-                
+                <div id="editExpenseSpinner">
+                    <center> <img src="/spinner-gif-transparent-background-14.gif" />  </center>
+                </div>
             </div>
 
             <!-- Footer -->
@@ -544,21 +547,121 @@
     </div>
   </div>
 
-
+  <link rel="stylesheet" href="/stylesheets/table-sortable.css">
 <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+<script src="/scripts/table-sortable.js" ></script>
 
 <script>
-    $(".collapse").on('show.bs.collapse', function () {
-        $(this).parent().find(".fa-angle-double-right").addClass("rotate");
-    }).on('hide.bs.collapse', function () {
-        $(this).parent().find(".fa-angle-double-right").removeClass("rotate");
-    });
+        $(".collapse").on('show.bs.collapse', function () {
+            $(this).parent().find(".fa-angle-double-right").addClass("rotate");
+        }).on('hide.bs.collapse', function () {
+            $(this).parent().find(".fa-angle-double-right").removeClass("rotate");
+        });
 
-   
+        
         $(document).ready(function(){
-          //  alert('hello');
+          $('#spinner').hide();
+          $('#editExpenseSpinner').hide();
+          $('#expenseDetailsSpinner').hide();
+
+
+          let columns = {
+            sequence: 'Sr No.',
+            name: 'Expense Name',
+            projectName: 'Project Name',
+            approvalStatus: 'Approval Status',
+            totalAmount: 'Total Amount',
+           /* pettyCashAmount: 'Petty Cash Amount',
+            conveyanceVoucherAmount: 'Conveyance Voucher Amount' ,
+            tourBillAmount: 'Tour Bill Amount',
+            createdDate : 'Created Date', */
+            editButton : 'Action'
+          }
+
+
+          var table = $('#rootExpenseTable').tableSortable({
+            data :[],
+            columns,
+            searchField: '#searchField',
+            sorting: true,
+            rowsPerPage: 5,
+            pagination:true,
+            tableWillMount: () => {
+                console.log('table will mount')
+               
+            },
+            tableDidMount: () => {
+                console.log('table did mount');
+
+                $('#spinner').hide();
+            },
+            tableWillUpdate: () => {
+                console.log('table will update')
+              //  table.refresh();
+             // onLoadTask();
+            },
+            tableDidUpdate: () => {
+              console.log('table did update');
+              anchorClickFunctionalities();
+              //onLoadTask();
+            },
+            tableWillUnmount: () => console.log('table will unmount'),
+            tableDidUnmount: () => console.log('table did unmount'),
+            onPaginationChange: function(nextPage, setPage) {
+                setPage(nextPage);
+            },
+            
+        });
+
+        $('#changeRows').on('change', function() {
+          table.updateRowsPerPage(parseInt($(this).val(), 10));
+        })
+
+        $('#refresh').click(function() {
+            table.refresh(true);
+            onLoadTask();
+        })
+         
+        onLoadTask();
+
+        function onLoadTask(){
+           // alert('Hello On Load Task');
+            $.ajax({
+                url : '/expense/expenseAllRecords',
+                type : 'get',
+                dataType: 'json',
+                beforeSend : function(){
+                    $('#spinner').show();
+                }
+            })
+            .done((allexpenserecords) => {
+                console.log('allexpenserecords :  '+JSON.stringify(allexpenserecords));
+                
+                let expenseTableHtml = '';
+                let expenseList = allexpenserecords.expenseList;
+                let data =expenseList;
+               
+                
+                table.setData(data, columns);
+                anchorClickFunctionalities();
+
+                /********** Edit Option ********/
+
+               
+                      
+            
+            })
+            .fail((jqXHR, status, error) => {
+                console.log('jqXHR  '+JSON.stringify(jqXHR));
+                console.log('error '+error);
+            })
+
+          }// End of OnLoadTask Function     
+
+
+
           $('#expenseIdpTag').hide();
 
           $("a.pettyCashButton").click(() => {
@@ -583,14 +686,23 @@
             location.assign('/expense/tourBillClaim/'+expenseId);
           });
 
+          $('#createNewExpenseButton').click(() =>{
+                $('#createExpenseModal').modal('show');
+          })
 
 
+
+        function anchorClickFunctionalities()
+        {
+
+
+          
           $("a.expId").click(function(){
             
+            alert('Hello PopUp');
             var expenseId = $(this).attr('href');
             console.log('expenseId   : '+expenseId);
             document.getElementById('expenseIdpTag').innerHTML = expenseId;
-        //     alert(expenseId); 
 
             $.ajax({
                 type : 'GET',
@@ -598,11 +710,14 @@
                 data : {
                     'expenseId' : expenseId
                 },
-                dataType : 'json'
+                dataType : 'json',
+                beforeSend: function()
+                {
+                  $('#expenseDetailsSpinner').show();
+                }
             })
             .done((expenseRelatedData) => {
-               // console.log('Expense Data '+data);
-            //    console.log('expense data '+JSON.stringify(expenseRelatedData));
+              
                 let expenseRecord = expenseRelatedData.Expense[0];
                 console.log('expenseList  '+JSON.stringify(expenseRecord));
 
@@ -654,6 +769,8 @@
                 expenseTableRows += '</tr>';   
 
                 //$('#expenseTable').append(expenseTableRows);
+                $('#expenseDetailsSpinner').hide();
+                $('#expenseTable').empty();
                 $('#expenseTable').html(expenseTableRows);
 
 
@@ -717,7 +834,10 @@
                 return false;
           });
 
-          $('a.expIdEditMode').click(function(){
+
+
+          /***********************************  Edit Functionality *********************/
+            $('a.expIdEditMode').click(function(){
               let expenseId = $(this).attr('id');
               
               $.ajax({
@@ -725,7 +845,11 @@
                   data: {
                     expenseId : expenseId
                   },
-                  dataType : 'json'
+                  dataType : 'json',
+                  beforeSend : function()
+                  {
+                    $('#editExpenseSpinner').show();
+                  }
               })
               .done((response) => {
                     console.log('response  : '+JSON.stringify(response));
@@ -735,129 +859,131 @@
                     let projectOptionsHtml = '';
                     if(projectList.length > 0)
                     {
-                        projectList.forEach((eachProject) =>
-                        {
-                          if(eachProject.sfid == expenseDetails.project_name__c)
-                              projectOptionsHtml += '<option selected value="'+eachProject.sfid+'">'+eachProject.name+'</option>';
-                          else
-                              projectOptionsHtml += '<option value="'+eachProject.sfid+'">'+eachProject.name+'</option>'; 
-                        })
-                    }
+                      projectList.forEach((eachProject) =>
+                      {
+                        if(eachProject.sfid == expenseDetails.project_name__c)
+                            projectOptionsHtml += '<option selected value="'+eachProject.sfid+'">'+eachProject.name+'</option>';
+                        else
+                            projectOptionsHtml += '<option value="'+eachProject.sfid+'">'+eachProject.name+'</option>'; 
+                      })
+                   }
 
-                    let expenseEdithtml = '<form  id="taskFormEdit" class="needs-validation" novalidate >'+
-                        '<div class="form-group">'+  
-                          '<div class="row">'+
-                            '<div class="col-md-6">'+
-                              '<label for="validationTooltip01">Expense Name</label>'+
-                              '<input type="text" class="form-control" id="validationTooltip01" value="'+expenseDetails.name+'" placeholder="Task Name"  name="taskname" required>'+
-                            '</div>'+
-                           
-                            '<div class="col-md-6">'+
-                            '<label for="validationTooltip03">Project Name</label>'+
-                             '<select class="custom-select custom-select-sm form-control" name="projectname">'+
-                                projectOptionsHtml+
-                             '</select>'+
-                            '</div>'+
+                  let expenseEdithtml = '<form  id="taskFormEdit" class="needs-validation" novalidate >'+
+                      '<div class="form-group">'+  
+                        '<div class="row">'+
+                          '<div class="col-md-6">'+
+                            '<label for="validationTooltip01">Expense Name</label>'+
+                            '<input type="text" class="form-control" id="validationTooltip01" value="'+expenseDetails.name+'" placeholder="Task Name"  name="taskname" required>'+
                           '</div>'+
-                        '</div>'+            
+                         
+                          '<div class="col-md-6">'+
+                          '<label for="validationTooltip03">Project Name</label>'+
+                           '<select class="custom-select custom-select-sm form-control" name="projectname">'+
+                              projectOptionsHtml+
+                           '</select>'+
+                          '</div>'+
+                        '</div>'+
+                      '</div>'+            
+                    
+                    '<div class="form-group">'+
+                        '<div class="row">'+
+                          '<div class="col-md-6">'+
+                            '<label for="validationTooltip03">Department</label>'+
+                            '<input type="text" class="form-control" id="validationTooltip03" value="'+expenseDetails.department__c+'" placeholder="Deaprtment"  name="department" >'+
+                          '</div>'+
+                          '<div class="col-md-6">'+
+                            '<label for="validationTooltip04">Designation</label>'+
+                            '<input type="text" class="form-control" id="validationTooltip04" value="'+expenseDetails.designation__c+'" placeholder="Designation"  name="designation" >'+
+                          '</div>'+
+                        '</div>'+
+                      '</div>'+
                       
                       '<div class="form-group">'+
-                          '<div class="row">'+
-                            '<div class="col-md-6">'+
-                              '<label for="validationTooltip03">Department</label>'+
-                              '<input type="text" class="form-control" id="validationTooltip03" value="'+expenseDetails.department__c+'" placeholder="Deaprtment"  name="department" >'+
-                            '</div>'+
-                            '<div class="col-md-6">'+
-                              '<label for="validationTooltip04">Designation</label>'+
-                              '<input type="text" class="form-control" id="validationTooltip04" value="'+expenseDetails.designation__c+'" placeholder="Designation"  name="designation" >'+
-                            '</div>'+
+                        '<div class="row">'+
+                          '<div class="col-md-6">'+
+                            '<label for="validationTooltip05">Employee ID</label>'+
+                            '<input type="text" class="form-control" id="validationTooltip05" value="'+expenseDetails.conveyance_voucher_employee_id__c+'" placeholder="Employee ID"  name="employeeId" >'+
+                          '</div>'+
+          
+                          '<div class="col-md-6">'+
+                            '<label for="validationTooltip06">Employee Category / Band</label>'+
+                            '<input type="text" class="form-control" id="validationTooltip06" value="'+expenseDetails.conveyance_employee_category_band__c+'" placeholder="Employee Category / Band"  name="empCategory" >'+
                           '</div>'+
                         '</div>'+
-                        
-                        '<div class="form-group">'+
-                          '<div class="row">'+
-                            '<div class="col-md-6">'+
-                              '<label for="validationTooltip05">Employee ID</label>'+
-                              '<input type="text" class="form-control" id="validationTooltip05" value="'+expenseDetails.conveyance_voucher_employee_id__c+'" placeholder="Employee ID"  name="employeeId" >'+
-                            '</div>'+
-            
-                            '<div class="col-md-6">'+
-                              '<label for="validationTooltip06">Employee Category / Band</label>'+
-                              '<input type="text" class="form-control" id="validationTooltip06" value="'+expenseDetails.conveyance_employee_category_band__c+'" placeholder="Employee Category / Band"  name="empCategory" >'+
-                            '</div>'+
-                          '</div>'+
-                        '</div>'+
-                        
-                        '<div class="form-group">'+
-                          '<div class="row">'+
-                            '<div class="col-md-6">'+
-                              '<label for="validationTooltip07">Approval Status</label>'+
-                              '<select disabled="true" class="custom-select custom-select-sm form-control" name="approvalStatus" id="validationTooltip07">'+
-                                    '<option value="'+expenseDetails.approval_status__c+'" selected>'+expenseDetails.approval_status__c+'</option>'+
-                               '</select>'+
-                            '</div>'+
-                            
-                            '<div class="col-md-6">'+
-                              '<label for="validationTooltip08">Incurred By</label>'+
-                              '<select class="custom-select custom-select-sm form-control" name="incurredBy">'+
-                                 '<option selected value="'+objUser.sfid+'" >'+objUser.name+'</option>'+
+                      '</div>'+
+                      
+                      '<div class="form-group">'+
+                        '<div class="row">'+
+                          '<div class="col-md-6">'+
+                            '<label for="validationTooltip07">Approval Status</label>'+
+                            '<select disabled="true" class="custom-select custom-select-sm form-control" name="approvalStatus" id="validationTooltip07">'+
+                                  '<option value="'+expenseDetails.approval_status__c+'" selected>'+expenseDetails.approval_status__c+'</option>'+
                              '</select>'+
-                            '</div>'+
-                          '</div>'+  
-                      '</div>'+
-                      '<input type="hidden"  value="'+expenseDetails.sfid+'"  name="expenseId">' +
-                      '<div class="modal-footer">'+
-                          '<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>'+
-                          '<button type="submit" id="expenseEditSubmitbutton"  class="btn btn-primary">Save</button>'+
-                      '</div>'+
-                      '</form>';
-                        
+                          '</div>'+
+                          
+                          '<div class="col-md-6">'+
+                            '<label for="validationTooltip08">Incurred By</label>'+
+                            '<select class="custom-select custom-select-sm form-control" name="incurredBy">'+
+                               '<option selected value="'+objUser.sfid+'" >'+objUser.name+'</option>'+
+                           '</select>'+
+                          '</div>'+
+                        '</div>'+  
+                    '</div>'+
+                    '<input type="hidden"  value="'+expenseDetails.sfid+'"  name="expenseId">' +
+                    '<div class="modal-footer">'+
+                        '<button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>'+
+                        '<button type="submit" id="expenseEditSubmitbutton"  class="btn btn-primary">Save</button>'+
+                    '</div>'+
+                    '</form>';
+                      
 
-                  
-                  $('#expenseEditModalBody').empty();
-                  $('#expenseEditModalBody').append(expenseEdithtml); 
+                    $('#editExpenseSpinner').hide();
+                    $('#expenseEditModalBody').empty();
+                    $('#expenseEditModalBody').append(expenseEdithtml); 
+    
+                })
+                .fail((jqXHR, status, error) => {
+                      console.log('Error  : '+JSON.stringify(jqXHR));
+                      $('#editExpenseSpinner').hide();
+                })
+
+            });
 
 
-                  $('#expenseEditSubmitbutton').click(function(){
-                      alert('HJJJJJ');
-                        $('#taskFormEdit').submit(function(e){
-                          alert('Form Going to Submit');
-                          e.preventDefault();
-                          var values = $(this).serialize();
-                          console.log('Expense Updated Form Values : '+values);
-                          $.ajax({
-                            url :'/expense/update-expense',
-                            type: 'post',
-                            data : values,
-                            dataType: 'json'
-                          })
-                          .done((response) => {
-                              console.log('Expense Creation Response : '+JSON.stringify(response));    
-                          })
-                          .fail((xhr, status, error)=> {
-                              console.log('xhr.responseText : '+xhr.responseText);
-                              if(xhr.responseText == 'Success')
-                              {
-                                  alert('Expense Created Successfully !');
-                              }
-                              else if(xhr.responseText == 'Error')
-                              {
-                                  alert('There occurred an error while creating expense !');
-                              }
-                          })
+            $('#expenseEditSubmitbutton').click(function(){
+              alert('HJJJJJ');
+                $('#taskFormEdit').submit(function(e){
+                  alert('Form Going to Submit');
+                  e.preventDefault();
+                  var values = $(this).serialize();
+                  console.log('Expense Updated Form Values : '+values);
+                  $.ajax({
+                    url :'/expense/update-expense',
+                    type: 'post',
+                    data : values,
+                    dataType: 'json',
+                    
+                  })
+                  .done((response) => {
+                      console.log('Expense Creation Response : '+JSON.stringify(response));    
+                  })
+                  .fail((xhr, status, error)=> {
+                      console.log('xhr.responseText : '+xhr.responseText);
+                      if(xhr.responseText == 'Success')
+                      {
+
+                          alert('Updated Successfully !');
+                          onLoadTask();
+                      }
+                      else if(xhr.responseText == 'Error')
+                      {
+                          alert('There occurred an error while creating expense !');
+                      }
                       })
-                  });
-                   
-              })
-              .fail((jqXHR, status, error) => {
-                    console.log('Error  : '+JSON.stringify(jqXHR));
-              })
+                  })
+              });
+        }
 
-          });
-
-          $('#createNewExpenseButton').click(() =>{
-                $('#createExpenseModal').modal('show');
-          })
 
     });
 </script>
