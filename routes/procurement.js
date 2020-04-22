@@ -16,13 +16,13 @@ router.get('/',verify,(request, response)=> {
     .then((assetQueryResult) => {
             console.log('assetQueryResult   '+assetQueryResult.rows);
             if(assetQueryResult.rowCount > 0)
-                response.render('assetRequistionForms',{name:request.user.name, email : request.user.email, assetList : assetQueryResult.rows });
+                response.render('assetRequistionForms',{objUser : objUser, name:request.user.name, email : request.user.email, assetList : assetQueryResult.rows });
             else
-                response.render('assetRequistionForms',{name:request.user.name, email : request.user.email, assetList : []});
+                response.render('assetRequistionForms',{objUser : objUser, name:request.user.name, email : request.user.email, assetList : []});
     })
     .catch((assetQueryError) => {
         console.log('assetQueryError   '+assetQueryError.stack);
-        response.render('assetRequistionForms',{name:request.user.name, email : request.user.email, assetList : []});
+        response.render('assetRequistionForms',{objUser : objUser,name:request.user.name, email : request.user.email, assetList : []});
     })
 });
 

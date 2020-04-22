@@ -1,0 +1,36 @@
+<% include ../partials/navbar %>
+
+<div class="row mt-5">
+    <div class="col-md-6 m-auto">
+        <div class="card card-body">
+              <% include ../partials/messages %>
+              <h5><center> List Of Expenses For Approval</center></h5>
+              <table id="expenseApprovalsTableList">
+
+
+
+              </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+
+        $.get("/approvals/expenseApprovalsList",
+        function(returnedData){
+            console.log('returnedData  : '+JSON.stringify(returnedData));
+            if(returnedData.length > 0)
+            {
+                
+                for(let i=0, len =returnedData.length ; i < len ; i++)
+                {
+
+                }
+            }
+        }).fail(function(error){
+            console.log("error "+error.stack);
+        });  
+    })
+</script>
+      

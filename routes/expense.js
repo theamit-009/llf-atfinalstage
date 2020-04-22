@@ -10,7 +10,7 @@ const router = new Router()
 
 router.get('/testQuery',(resquest, response) => {
 
-  pool.query('SELECT exp.sfid, exp.Name , exp.Project_Name__c, pro.name FROM salesforce.Milestone1_Expense__c as exp JOIN salesforce.Milestone1_Project__c as pro ON exp.Project_name__c = pro.sfid')
+  pool.query('SELECT exp.sfid,  exp.Project_Name__c, pro.name as proname,exp.Name as expName FROM salesforce.Milestone1_Expense__c as exp JOIN salesforce.Milestone1_Project__c as pro ON exp.Project_name__c = pro.sfid')
   .then((testQueryResult) => {
       response.send(testQueryResult.rows);
   })
@@ -166,7 +166,7 @@ router.get('/expenseAllRecords',verify, async (request, response) => {
   console.log('objUser   : '+JSON.stringify(objUser));
 
   pool
-  .query('SELECT id, sfid, Name , Project_Name__c, Approval_Status__c, Amount_Claimed__c, petty_cash_amount__c, Conveyance_Amount__c, Tour_bill_claim_Amount__c,createddate FROM salesforce.Milestone1_Expense__c WHERE Incurred_By_Heroku_User__c = $1 AND sfid != \'\'',[objUser.sfid])
+  .query('SELECT exp.id, exp.sfid, exp.Name , exp.isHerokuEditButtonDisabled__c, exp.Project_Name__c, exp.Approval_Status__c, exp.Amount_Claimed__c, exp.petty_cash_amount__c, exp.Conveyance_Amount__c, exp.Tour_bill_claim_Amount__c, exp.createddate, pro.sfid as prosfid, pro.name as proname FROM salesforce.Milestone1_Expense__c as exp JOIN salesforce.Milestone1_Project__c as pro ON exp.Project_name__c = pro.sfid WHERE exp.Incurred_By_Heroku_User__c = $1 AND exp.sfid != \'\'',[objUser.sfid])
   .then((expenseQueryResult) => {
       console.log('expenseQueryResult   : '+JSON.stringify(expenseQueryResult.rows));
           if(expenseQueryResult.rowCount > 0)
@@ -190,15 +190,20 @@ router.get('/expenseAllRecords',verify, async (request, response) => {
                 let strDate = crDate.toLocaleString();
                 obj.sequence = i+1;
                 obj.name = '<a href="'+expenseQueryResult.rows[i].sfid+'" data-toggle="modal" data-target="#popup" class="expId" id="" >'+expenseQueryResult.rows[i].name+'</a>';
-                obj.projectName = expenseQueryResult.rows[i].project_name__c;
+                obj.projectName = expenseQueryResult.rows[i].proname;
                 obj.approvalStatus = expenseQueryResult.rows[i].approval_status__c;
                 obj.totalAmount = expenseQueryResult.rows[i].amount_claimed__c;
                 obj.pettyCashAmount = expenseQueryResult.rows[i].petty_cash_amount__c;
                 obj.conveyanceVoucherAmount = expenseQueryResult.rows[i].conveyance_amount__c;
                 obj.tourBillAmount = expenseQueryResult.rows[i].tour_bill_claim_amount__c;
                 obj.createdDate = strDate;
-                obj.editButton = '<a href="#"  data-toggle="modal" data-target="#popupEdit" class="btn btn-primary expIdEditMode"  style="color:white;" id="'+expenseQueryResult.rows[i].sfid+'" >Edit</a>'
+                if(expenseQueryResult.rows[i].isherokueditbuttondisabled__c)
+                  obj.editButton = '<button  disabled  data-toggle="modal" data-target="#popupEdit" class="btn btn-primary expIdEditMode"   id="edit'+expenseQueryResult.rows[i].sfid+'" >Edit</button>';
+                else
+                  obj.editButton = '<button    data-toggle="modal" data-target="#popupEdit" class="btn btn-primary expIdEditMode"   id="edit'+expenseQueryResult.rows[i].sfid+'" >Edit</button>';
+                obj.approvalButton = '<button   class="btn btn-primary expIdApproval"  style="color:white;" id="'+expenseQueryResult.rows[i].sfid+'" >Submit For Approval</button>';
                 expenseList.push(obj);
+                /* disabled="'+expenseQueryResult.rows[i].isherokueditbuttondisabled__c+'" */
               }
 
 
@@ -690,6 +695,60 @@ router.get('/activityCodes',async (request, response) => {
         response.send(500);
     })
     
+});
+
+
+
+router.post('/sendForApproval',verify,(request, response) => {
+    console.log('hekllo');
+    let objUser = request.user;
+    let expenseId = request.body.selectedExpenseId;
+    console.log('expenseId  :  '+expenseId);
+    let approvalStatus = 'Pending';
+    let updateExpenseQuery = 'UPDATE salesforce.Milestone1_Expense__c SET '+  
+                             'isHerokuEditButtonDisabled__c = true , '+
+                             'approval_status__c = \''+approvalStatus+'\' '+
+                             'WHERE sfid = $1';
+     console.log('updateExpenseQuery :  '+updateExpenseQuery);
+
+    pool.query(updateExpenseQuery,[expenseId])
+    .then((expenseUpdateQueryResult) => {
+          console.log('expenseUpdateQueryResult  : '+JSON.stringify(expenseUpdateQueryResult));
+    })
+    .catch((expenseUpdateQueryError) => {
+          console.log('expenseUpdateQueryError  : '+expenseUpdateQueryError.stack);
+    });
+
+
+    let managerId = '';
+    pool
+    .query('SELECT manager__c FROM salesforce.Team__c WHERE sfid IN (SELECT team__c FROM salesforce.Team_Member__c WHERE Representative__c = $1)',[objUser.sfid])
+    .then((teamMemberQueryResult) => {
+          console.log('teamMemberQueryResult   : '+JSON.stringify(teamMemberQueryResult.rows));
+          if(teamMemberQueryResult.rowCount > 0)
+          {
+            let lstManagerId = teamMemberQueryResult.rows.filter((eachRecord) => {
+                                    if(eachRecord.manager__c != null)
+                                        return eachRecord;
+                              })
+            managerId = lstManagerId[0].manager__c;
+            console.log('managerId   : '+managerId);
+
+            pool.query('INSERT INTO salesforce.Custom_Approval__c (Approval_Type__c, Submitter__c, Assign_To__c ,Expense__c, Comment__c, Status__c) values($1, $2, $3, $4, $5, $6) ',['Expense',objUser.sfid, managerId, expenseId, '', 'Pending' ])
+            .then((customApprovalQueryResult) => {
+                    console.log('customApprovalQueryResult  '+JSON.stringify(customApprovalQueryResult));
+            })
+            .catch((customApprovalQueryError) => {
+                    console.log('customApprovalQueryError  '+customApprovalQueryError.stack);
+            })
+          }
+    })
+    .catch((teamMemberQueryError) => {
+          console.log('teamMemberQueryError   :  '+teamMemberQueryError.stack);
+    })
+
+    response.send('OKOKOK');
+
 });
 
 module.exports = router;

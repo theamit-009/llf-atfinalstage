@@ -92,46 +92,72 @@ router.get('/login', function(req, response, next) {
     response.render('login');
 });
 
-router.post('/login',(request,response)=>{
-  const {email,password} = request.body;
 
+router.post('/login', async (request,response)=>{
+
+  const {email, password} = request.body;
   console.log('email : '+email+' passoword '+password);
-  let errors = [];
+
+  let errors = [], userId, objUser, isUserExist = false;
 
   if (!email || !password) {
     errors.push({ msg: 'Please enter all fields' });
+    response.render('login',{errors});
   }
-  
+
+  await
   pool
   .query('SELECT Id, sfid, Name, email FROM salesforce.Contact WHERE email = $1 AND password2__c = $2',[email,password])
   .then((loginResult) => {
         console.log('loginResult.rows[0]  '+JSON.stringify(loginResult.rows[0]));
-        const token = jwt.sign({ user : loginResult.rows[0] }, process.env.TOKEN_SECRET, {
-          expiresIn: 8640000 // expires in 24 hours
-        });
-        
-        
-        if(loginResult.rows.length > 0)
+        if(loginResult.rowCount > 0)
         {
-          var email = loginResult.rows[0].email;
-          var name = loginResult.rows[0].name;
-          response.cookie('jwt',token, { httpOnly: false, secure: false, maxAge: 3600000 });
-          //response.header('auth-token', token).send('login successful'+token);
-          response.header('auth-token', token).render('dashboard',{name : name , email: email});
-
+          userId = loginResult.rows[0].sfid;
+          objUser = loginResult.rows[0];
+          isUserExist = true;
         }
-         // response.header('auth-token', token).send(token);         
+        else
+        {
+          isUserExist = false;
+        }      
   }) 
   .catch((loginError) =>{
     console.log('loginError   :  '+loginError.stack);
+    isUserExist = false;
   })
 
-  if(errors.length >0 ){
-    response.render('login',{errors})
+  await 
+  pool.query('SELECT sfid FROM salesforce.Team__c WHERE Manager__c =  $1 ',[userId])
+  .then((teamQueryResult) => {
+        if(teamQueryResult.rowCount > 0)
+              objUser.isManager = true;
+        else
+              objUser.isManager = false; 
+  })
+  .catch((teamQueryError) => {
+
+  })
+
+  if(isUserExist && errors.length == 0)
+  {
+    const token = jwt.sign({ user : objUser }, process.env.TOKEN_SECRET, {
+      expiresIn: 8640000 // expires in 24 hours
+    });
+  
+    response.cookie('jwt',token, { httpOnly: false, secure: false, maxAge: 3600000 });
+    response.header('auth-token', token).render('dashboard',{objUser});
   }
-  
-  
+  else
+  {
+    response.render('login',{errors});
+  }
+    
 }) 
+
+router.get('/home',verify, (request, response) => {
+    let objUser = request.user;
+    response.render('dashboard',{objUser});
+})
 
 
 router.get('/getuser',verify, (request, response) => {
@@ -147,6 +173,7 @@ router.get('/timesheet',verify,function(request,response){
 
   console.log('request.user '+JSON.stringify(request.user));
   var userId = request.user.sfid;
+  let objUser = request.user;
   console.log('userId : '+userId);
 //  response.render('timesheetcalendar');
 
@@ -219,7 +246,7 @@ router.get('/timesheet',verify,function(request,response){
                       .query(taskQueryText, lstProjectId)
                       .then((taskQueryResult) => {
                           console.log('taskQueryResult  rows '+taskQueryResult.rows.length);
-                          response.render('timesheetcalendar',{projectList : projectQueryResult.rows, contactList : contactResult.rows, taskList : taskQueryResult.rows }); // render calendar
+                          response.render('timesheetcalendar',{objUser, projectList : projectQueryResult.rows, contactList : contactResult.rows, taskList : taskQueryResult.rows }); // render calendar
                       })
                       .catch((taskQueryError) => {
                           console.log('taskQueryError : '+taskQueryError.stack);
@@ -230,21 +257,21 @@ router.get('/timesheet',verify,function(request,response){
                 .catch((projectQueryError) => {
                       console.log('projectQueryError '+projectQueryError.stack);
                       //response.send(403);
-                      response.render('timesheetcalendar',{projectList : [], contactList : [], taskList : [] }); // render calendar
+                      response.render('timesheetcalendar',{objUser, projectList : [], contactList : [], taskList : [] }); // render calendar
                 })
              
             })
               .catch((projectTeamQueryError) =>{
                 console.log('projectTeamQueryError : '+projectTeamQueryError.stack);
                // response.send(403);
-               response.render('timesheetcalendar',{projectList : [], contactList : [], taskList : [] }); 
+               response.render('timesheetcalendar',{objUser, projectList : [], contactList : [], taskList : [] }); 
               })          
            })
 
           .catch((teamMemberQueryError) => {
             console.log('Error in team member query '+teamMemberQueryError.stack);
             //response.send(403);
-            response.render('timesheetcalendar',{projectList : [], contactList : [], taskList : [] }); 
+            response.render('timesheetcalendar',{objUser, projectList : [], contactList : [], taskList : [] }); 
           })
   
         }) 
