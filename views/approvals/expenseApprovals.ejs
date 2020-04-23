@@ -1,14 +1,15 @@
 <% include ../partials/navbar %>
 
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js" >
+<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js" ></script>
+
 <div class="row mt-5">
     <div class="col-md-6 m-auto">
         <div class="card card-body">
               <% include ../partials/messages %>
               <h5><center> List Of Expenses For Approval</center></h5>
               <table id="expenseApprovalsTableList">
-
-
-
+                  
               </table>
         </div>
     </div>
@@ -31,6 +32,10 @@
         }).fail(function(error){
             console.log("error "+error.stack);
         });  
+
+       
+
+
     })
 </script>
       
