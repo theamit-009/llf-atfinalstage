@@ -378,6 +378,14 @@ router.post('/update-expense',verify,(request, response) => {
 
 });
 
+
+router.get('/expenseRecordDetails',(request, response) =>{
+
+    var expenseId = request.query.expenseId;
+    console.log('Hurrah expenseId '+expenseId);
+
+});
+
 router.get('/details', async (request, response) => {
 
     var expenseId = request.query.expenseId;
@@ -755,5 +763,93 @@ router.post('/sendForApproval',verify,(request, response) => {
     response.send('OKOKOK');
 
 });
+
+
+
+router.get('/pettycashlistview',verify,(request, response) => {
+
+  let objUser = request.user;
+  console.log('objUser  : '+JSON.stringify(objUser));
+  let expenseId = request.query.expenseId;
+  console.log('expenseId  '+expenseId);
+
+  response.render('pettycashlistview',{objUser,expenseId});
+})
+
+router.get('/getpettycashlist',verify,(request, response) => {
+
+  let objUser = request.user;
+  let expenseId = request.query.expenseId;
+  console.log('expenseId  '+expenseId);
+
+
+  pool
+  .query('SELECT sfid, name, bill_no__c, Bill_Date__c ,Nature_of_exp__c ,createddate from salesforce.Petty_Cash_Expense__c WHERE expense__c = $1',[expenseId])
+  .then((pettyCashQueryResult) => {
+        console.log('pettyCashQueryResult  '+JSON.stringify(pettyCashQueryResult.rows));
+          if(pettyCashQueryResult.rowCount > 0)
+          {
+              //response.send(pettyCashQueryResult.rows);
+
+              let modifiedPettyCashList = [],i =1;
+              pettyCashQueryResult.rows.forEach((eachRecord) => {
+                let obj = {};
+                let createdDate = new Date(eachRecord.createddate);
+                let strDate = createdDate.toLocaleString();
+                let strBillDate = new Date(eachRecord.bill_date__c).toLocaleString();
+                obj.sequence = i;
+                obj.name = '<a href="#" class="pettyCashTag" id="'+eachRecord.sfid+'" >'+eachRecord.name+'</a>';
+                obj.billNo = eachRecord.bill_no__c;
+                obj.natureOfExpense = eachRecord.nature_of_exp__c;
+                obj.billDate = strBillDate;
+                obj.createDdate = strDate;
+
+                i= i+1;
+                modifiedPettyCashList.push(obj);
+              })
+              response.send(modifiedPettyCashList);
+          }
+          else
+          {
+              response.send([]);
+          }
+  })
+  .catch((pettyCashQueryError) => {
+        console.log('pettyCashQueryError  '+pettyCashQueryError.stack);
+        response.send([]);
+  })
+
+  console.log('objUser  : '+JSON.stringify(objUser));
+
+})
+
+
+
+router.get('/getpettycashDetail',verify,(request, response) => {
+
+  let pettyCashId = request.params.pettyCashId;
+  console.log('pettyCashId  : '+pettyCashId);
+
+  pool
+  .query('SELECT sfid, name, bill_no__c, Bill_Date__c ,Nature_of_exp__c ,createddate from salesforce.Petty_Cash_Expense__c WHERE sfid = $1',[pettyCashId])
+  .then((pettyCashQueryResult) => {
+        console.log('pettyCashQueryResult  '+JSON.stringify(pettyCashQueryResult.rows));
+        if(pettyCashQueryResult.rowCount > 0)
+        {
+          response.send(pettyCashQueryResult.rows);
+        }
+        else
+        {
+          response.send({});
+        }
+         
+  })
+  .catch((pettyCashQueryError) => {
+        console.log('pettyCashQueryError  '+pettyCashQueryError.stack);
+        response.send({});
+  })
+
+})
+
 
 module.exports = router;

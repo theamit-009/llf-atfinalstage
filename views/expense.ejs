@@ -709,7 +709,7 @@
                 pettyCashTableRows += '<td>'+strDate+'</td>';
                 pettyCashTableRows += '</tr>';
               }
-              pettyCashTableRows += '<tr><td colspan="4"><center><a href="#" >View All</a></center></td></tr>';
+              pettyCashTableRows += '<tr><td colspan="4"><center><a href="/expense/pettycashlistview?expenseId='+expenseId+'" >View All</a></center></td></tr>';
               $('#pettyCashTable').empty();
               $('#pettyCashTable').html(pettyCashTableRows);
             
