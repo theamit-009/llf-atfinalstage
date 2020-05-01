@@ -63,12 +63,53 @@
                <!-- Petty Cash Details Body End -->
             </div>
             <div class="modal-footer">
-              <button type="button" class="btn btn-primary" id="submitForApproval" >Submit</button>
               <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
           </div>
         </div>
       </div>
+
+
+
+
+
+
+
+
+
+      <div id="pettyCashEditModal" class="modal fade ">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Approval Comment</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div id="editModalBody" class="modal-body">
+                  
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         
 
@@ -89,6 +130,7 @@
             billDate: 'Bill Date',
             natureOfExpense: 'Nature Of Expense',
             createDdate: 'Created Date',
+            editAction : 'Action'
 
         }
       
@@ -160,6 +202,9 @@
 
         function anchorClickFunctionalities()
         {
+
+                /*** View Functionality ***/
+
                 $('a.pettyCashTag').on('click',function(event){
                         event.stopImmediatePropagation();
                         event.stopPropagation();
@@ -229,14 +274,104 @@
                           console.log('jqXHR  : '+JSON.stringify(jqXHR));
                           console.log('error  : '+error);
                         })
-                
-
-
-
                         
                 });
 
 
+
+                /*** Edit Functionality ***/
+                $('.editPettyCash').on('click',function(event){
+
+                    event.stopImmediatePropagation();
+                    let editPettyCashId = this.id.substring(9,28);
+                     alert('editPettyCashId  '+editPettyCashId);
+                    $('#pettyCashEditModal').modal('show');                  
+
+                    $.ajax({
+                          url : '/expense/getpettycashDetail',
+                          type:'get',
+                          data : {
+                              pettyCashId : editPettyCashId
+                          },
+                          dataType: 'json',
+                          beforeSend : function(){
+                            //$('#detailLoadingSpinner').show();
+                          }
+                      })
+                      .done((response) => {
+                          console.log('pettyCashDetails  : '+JSON.stringify(response));
+                          let pettyCashRecord = response[0];
+                          
+                          
+                          let editFormHtml = '';
+                          editFormHtml += '<form id="editPettyCashForm">'+
+                              '<div class="form-group">'+
+                                  '<div class="row">'+
+                                    '<div class="col-md-6">'+
+                                      '<label for="pettyCashName">Name</label>'+
+                                      '<input type="text" class="form-control" id="pettyCashName" value="'+pettyCashRecord.pettycashname+'" placeholder="Task Name"  name="pettyCashName" required>'+
+                                    '</div>'+
+                                    
+                                    '<div class="col-md-6">'+
+                                    '<label for="expenseName">Expense Name</label>'+
+                                      '<select id="expenseName" class="custom-select custom-select-sm form-control" name="ExpenseName">'+
+                                         '<option value="'+pettyCashRecord.esfid+'">'+pettyCashRecord.expname+'</option>'+
+                                      '</select>'+
+                                    '</div>'+
+                                  '</div>'+ 
+                              '</div>'+
+
+                              '<div class="form-group">'+
+                                  '<div class="row">'+
+                                    '<div class="col-md-6">'+
+                                      '<label for="billNumber">Bill Number</label>'+
+                                      '<input type="text" class="form-control" id="billNumber" value="'+pettyCashRecord.bill_no__c+'"   name="billNumber" >'+
+                                    '</div>'+
+                                    
+                                    '<div class="col-md-6">'+
+                                    '<label for="billDate">Bill Date</label>'+
+                                      '<input type="date" class="form-control" id="billDate" value="'+pettyCashRecord.bill_date__c+'"   name="billDate" >'+
+                                    '</div>'+
+                                  '</div>'+ 
+                              '</div>'+
+
+                              '<div class="form-group">'+
+                                  '<div class="row">'+
+                                    '<div class="col-md-6">'+
+                                      '<label for="natureOfExpense">Nature Of Expense</label>'+
+                                      '<input type="text" class="form-control" id="natureOfExpense" value="'+pettyCashRecord.nature_of_exp__c+'"   name="natureOfExpense" >'+
+                                    '</div>'+
+                                    
+                                    '<div class="col-md-6">'+
+                                    '<label for="amount">Amount</label>'+
+                                    '<input type="number" class="form-control" id="amount" value="'+pettyCashRecord.amount__c+'"   name="amount" >'+
+                                    '</div>'+
+                                  '</div>'+ 
+                              '</div>'+
+
+                              '<div class="form-group">'+
+                                  '<div class="row">'+
+                                    '<div class="col-md-6">'+
+                                      '<label for="description">Description</label>'+
+                                      '<textarea  class="form-control" id="description" value="'+pettyCashRecord.description_of_activity_expenses__c+'"  name="description" ></textarea>'+
+                                    '</div>'+
+                                    '</div>'+     
+                              '</div>'+
+                          '</form>';
+
+                        $('#editModalBody').empty();
+                        $('#editModalBody').append(editFormHtml);
+                          
+
+                       
+
+                      })
+                      .fail((jqXHR, status, error) => {
+                          console.log('jqXHR   '+JSON.stringify(jqXHR));
+                          console.log('error  '+error);
+                      })
+
+                });
 
         }
 

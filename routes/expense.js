@@ -803,6 +803,7 @@ router.get('/getpettycashlist',verify,(request, response) => {
                 obj.natureOfExpense = eachRecord.nature_of_exp__c;
                 obj.billDate = strBillDate;
                 obj.createDdate = strDate;
+                obj.editAction = '<button href="#" class="btn btn-primary editPettyCash" id="pettyCash'+eachRecord.sfid+'" >Edit</button>'
 
                 i= i+1;
                 modifiedPettyCashList.push(obj);
@@ -831,7 +832,7 @@ router.get('/getpettycashDetail',verify,(request, response) => {
   console.log('pettyCashId  : '+pettyCashId);
 
 
-  let queryText = 'SELECT pettycash.sfid, pettycash.description_of_activity_expenses__c, pettycash.amount__c, pettycash.name as pettycashname ,exp.name as expname, pettycash.bill_no__c, pettycash.Bill_Date__c ,pettycash.Nature_of_exp__c ,pettycash.createddate '+
+  let queryText = 'SELECT pettycash.sfid as psfid, exp.sfid as esfid, pettycash.description_of_activity_expenses__c, pettycash.amount__c, pettycash.name as pettycashname ,exp.name as expname, pettycash.bill_no__c, pettycash.Bill_Date__c ,pettycash.Nature_of_exp__c ,pettycash.createddate '+
                    'FROM salesforce.Petty_Cash_Expense__c pettycash '+ 
                    'INNER JOIN salesforce.Milestone1_Expense__c exp '+
                    'ON pettycash.Expense__c =  exp.sfid '+
@@ -847,13 +848,13 @@ router.get('/getpettycashDetail',verify,(request, response) => {
         }
         else
         {
-          response.send({});
+          response.send([]);
         }
          
   })
   .catch((pettyCashQueryError) => {
         console.log('pettyCashQueryError  '+pettyCashQueryError.stack);
-        response.send({});
+        response.send([]);
   })
 
 })
