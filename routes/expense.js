@@ -827,11 +827,18 @@ router.get('/getpettycashlist',verify,(request, response) => {
 
 router.get('/getpettycashDetail',verify,(request, response) => {
 
-  let pettyCashId = request.params.pettyCashId;
+  let pettyCashId = request.query.pettyCashId;
   console.log('pettyCashId  : '+pettyCashId);
 
+
+  let queryText = 'SELECT pettycash.sfid, pettycash.description_of_activity_expenses__c, pettycash.amount__c, pettycash.name as pettycashname ,exp.name as expname, pettycash.bill_no__c, pettycash.Bill_Date__c ,pettycash.Nature_of_exp__c ,pettycash.createddate '+
+                   'FROM salesforce.Petty_Cash_Expense__c pettycash '+ 
+                   'INNER JOIN salesforce.Milestone1_Expense__c exp '+
+                   'ON pettycash.Expense__c =  exp.sfid '+
+                   'WHERE  pettycash.sfid= $1 ';
+
   pool
-  .query('SELECT sfid, name, bill_no__c, Bill_Date__c ,Nature_of_exp__c ,createddate from salesforce.Petty_Cash_Expense__c WHERE sfid = $1',[pettyCashId])
+  .query(queryText,[pettyCashId])
   .then((pettyCashQueryResult) => {
         console.log('pettyCashQueryResult  '+JSON.stringify(pettyCashQueryResult.rows));
         if(pettyCashQueryResult.rowCount > 0)

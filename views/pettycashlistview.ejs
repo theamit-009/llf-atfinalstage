@@ -41,7 +41,7 @@
 
 <!-- Petty Cash Details Modal -->
 
-<div id="pettyCashDetailsModal" class="modal fade">
+<div id="pettyCashDetailsModal" class="modal fade ">
         <div class="modal-dialog" role="document">
           <div class="modal-content">
             <div class="modal-header">
@@ -51,19 +51,16 @@
               </button>
             </div>
             <div class="modal-body">
-      
-              <div class="form-group">
-                <label for="commentTextarea">Comment</label>
-                <textarea class="form-control" id="commentTextarea" rows="3" autocomplete="off"></textarea>
-              </div>
-              <div class="form-group">  
-                <div class="row">
-                  <div class="col-md-6">
-                    <input type="hidden" class="form-control"  value=""  id="expenseId" name="expenseId" required>
-                  </div>
-              </div>
-      
-            </div>
+                <!-- Petty Cash Details Body Start -->
+             
+                <div id="detailLoadingSpinner">
+                    <center> <img src="/spinner-gif-transparent-background-14.gif" />  </center>
+                </div>
+                <table id="pettyCashDetailsTable" class="table">
+
+                </table>
+             
+               <!-- Petty Cash Details Body End -->
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-primary" id="submitForApproval" >Submit</button>
@@ -167,8 +164,8 @@
                         event.stopImmediatePropagation();
                         event.stopPropagation();
                         $('#pettyCashDetailsModal').modal('show');
-                        let pettyCashId = this.id;
-                        alert('pettyCashId  '+pettyCashId);
+                        var pettyCashId = this.id;
+                      //  alert('pettyCashId  '+pettyCashId);
 
 
                         $.ajax({
@@ -177,13 +174,58 @@
                             data : {
                                 pettyCashId : pettyCashId
                             },
-                            dataType: 'json'
+                            dataType: 'json',
+                            beforeSend : function(){
+                              $('#detailLoadingSpinner').show();
+                            }
                         })
                         .done((response) => {
                             console.log('pettyCashDetails  : '+JSON.stringify(response));
+                            $('#detailLoadingSpinner').hide();
+                            if(response.length > 0)
+                            {
+                              let pettyCashRecord = response[0];
+                              let htmlTable = '';
+                              let strBillDate = new Date(pettyCashRecord.bill_date__c).toLocaleString();
+                              let strCreatedDate = new Date(pettyCashRecord.createddate).toLocaleString();
+
+                              htmlTable += '<tr>';
+                                  htmlTable += '<td><strong>Name</strong></td>';
+                                  htmlTable += '<td>'+pettyCashRecord.pettycashname+'</td>';
+                                  htmlTable += '<td><strong>Expense Name</strong></td>';
+                                  htmlTable += '<td>'+pettyCashRecord.expname+'</td>';
+                              htmlTable += '</tr>';
+                               
+                              htmlTable += '<tr>';
+                              htmlTable += '<td><strong>Bill Number</strong></td>';
+                              htmlTable += '<td>'+pettyCashRecord.bill_no__c+'</td>';
+                              htmlTable += '<td><strong>Bill Date</strong></td>';
+                              htmlTable += '<td>'+strBillDate+'</td>';
+                              htmlTable += '</tr>';
+
+                              htmlTable += '<tr>';
+                                  htmlTable += '<td><strong>Nature Of Expense</strong></td>';
+                                  htmlTable += '<td>'+pettyCashRecord.nature_of_exp__c+'</td>';
+                                  htmlTable += '<td><strong>Amount</strong></td>';
+                                  htmlTable += '<td>'+pettyCashRecord.amount__c+'</td>';
+                              htmlTable += '</tr>';
+
+                              htmlTable += '<tr>';
+                                  htmlTable += '<td><strong>Description</strong></td>';
+                                  htmlTable += '<td>'+pettyCashRecord.description_of_activity_expenses__c+'</td>';
+                                  htmlTable += '<td><strong>Created Date</strong></td>';
+                                  htmlTable += '<td>'+strCreatedDate+'</td>';
+                              htmlTable += '</tr>';
+
+                              $('#pettyCashDetailsTable').empty();
+                              $('#pettyCashDetailsTable').html(htmlTable);
+                            }
+
+                            
                      
                         })
                         .fail((jqXHR, status, error) =>{
+                          $('#detailLoadingSpinner').hide();
                           console.log('jqXHR  : '+JSON.stringify(jqXHR));
                           console.log('error  : '+error);
                         })
