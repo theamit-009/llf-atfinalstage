@@ -39,7 +39,7 @@
 
 
 
-<!-- Petty Cash Details Modal -->
+<!-- Petty Cash Details Modal  Start -->
 
 <div id="pettyCashDetailsModal" class="modal fade ">
         <div class="modal-dialog" role="document">
@@ -67,64 +67,95 @@
             </div>
           </div>
         </div>
-      </div>
+  </div>
+ 
+   <!-- Petty Cash Details Modal  End -->
 
 
-
-
-
-
-
-
+   <!-- Petty Cash Edit Modal  Start -->
 
       <div id="pettyCashEditModal" class="modal fade ">
           <div class="modal-dialog" role="document">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">Approval Comment</h5>
+                <h5 class="modal-title">Petty Cash Form</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                   <span aria-hidden="true">&times;</span>
                 </button>
               </div>
-              <div id="editModalBody" class="modal-body">
-                  <form id="editPettyCashForm" >
-                      <div id="insideForm">
-
+            
+              <div class="modal-body" id="editModalBody" >
+                  <form name="editPettyCashForm" id="editPettyCashForm" >
+                   <div class="form-group">
+                      <div class="row">
+                          <div class="col-md-6">
+                            <label for="pettyCashName">Name</label>
+                            <input type="text" disabled class="form-control" id="pettyCashName" value=""   name="pettyCashName" required>
+                          </div>
+                          
+                          <div class="col-md-6">
+                          <label for="expenseName">Expense Name</label>
+                            <select id="expenseName" class="custom-select custom-select-sm form-control" name="expenseName">
+                              
+                            </select>
+                          </div>
                       </div>
+                    </div>
+                    
+
+                    <div class="form-group">
+                        <div class="row">
+                          <div class="col-md-6">
+                            <label for="billNumber">Bill Number</label>
+                            <input type="text" class="form-control" id="billNumber" value=""   name="billNumber" >
+                          </div>
+                          
+                          <div class="col-md-6">
+                          <label for="billDate">Bill Date</label>
+                            <input type="date" class="form-control" id="billDate" value=""   name="billDate" >
+                          </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="row">
+                          <div class="col-md-6">
+                            <label for="natureOfExpense">Nature Of Expense</label>
+                            <input type="text" class="form-control" id="natureOfExpense" value=""   name="natureOfExpense" >
+                          </div>
+                          
+                          <div class="col-md-6">
+                          <label for="amount">Amount</label>
+                          <input type="number" class="form-control" id="amount" value=""   name="amount" >
+                          </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="row">
+                            <div class="col-md-6">
+                              <label for="description">Description</label>
+                              <textarea  class="form-control" id="description" value=""  name="description" ></textarea>
+                            </div>
+                        </div>     
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary" id="editPettyCashButton" data-dismiss="modal">Save</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
                   </form>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="editPettyCashButton" data-dismiss="modal">Save</button>
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-              </div>
-            </div>
-          </div>
+                </div>
+             
         </div>
+    </div>
   
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
+    <!-- Petty Cash Edit Modal  End -->
 
 <script>
     $(document).ready(function(){
        $('#expenseId').hide();
         let expenseId = document.getElementById('expenseId').innerHTML;
       //  alert('expenseId  : '+expenseId);
-
 
     /**************Table Sortable Start ***********/
 
@@ -295,7 +326,6 @@
                 });
 
 
-
                 /*** Edit Functionality ***/
                 $('.editPettyCash').on('click',function(event){
 
@@ -321,63 +351,24 @@
                           let billDate = formatDate(new Date(pettyCashRecord.bill_date__c));
                           console.log('billDate  :  '+billDate);
                           
-                          let editFormHtml = '';
-                          editFormHtml += '<div class="form-group">'+
-                                  '<div class="row">'+
-                                    '<div class="col-md-6">'+
-                                      '<label for="pettyCashName">Name</label>'+
-                                      '<input type="text" disabled class="form-control" id="pettyCashName" value="'+pettyCashRecord.pettycashname+'" placeholder="Task Name"  name="pettyCashName" required>'+
-                                    '</div>'+
-                                    
-                                    '<div class="col-md-6">'+
-                                    '<label for="expenseName">Expense Name</label>'+
-                                      '<select id="expenseName" class="custom-select custom-select-sm form-control" name="ExpenseName">'+
-                                         '<option value="'+pettyCashRecord.esfid+'">'+pettyCashRecord.expname+'</option>'+
-                                      '</select>'+
-                                    '</div>'+
-                                  '</div>'+ 
-                              '</div>'+
+                          document.forms["editPettyCashForm"]["pettyCashName"].value = pettyCashRecord.pettycashname;
+                          document.forms["editPettyCashForm"]["billNumber"].value = pettyCashRecord.bill_no__c;
+                          document.forms["editPettyCashForm"]["billDate"].value = billDate;
+                          document.forms["editPettyCashForm"]["natureOfExpense"].value = pettyCashRecord.nature_of_exp__c;
+                          document.forms["editPettyCashForm"]["amount"].value = pettyCashRecord.amount__c;
+                          document.forms["editPettyCashForm"]["description"].value = pettyCashRecord.description_of_activity_expenses__c;                                           
 
-                              '<div class="form-group">'+
-                                  '<div class="row">'+
-                                    '<div class="col-md-6">'+
-                                      '<label for="billNumber">Bill Number</label>'+
-                                      '<input type="text" class="form-control" id="billNumber" value="'+pettyCashRecord.bill_no__c+'"   name="billNumber" >'+
-                                    '</div>'+
-                                    
-                                    '<div class="col-md-6">'+
-                                    '<label for="billDate">Bill Date</label>'+
-                                      '<input type="date" class="form-control" id="billDate" value="'+billDate+'"   name="billDate" >'+
-                                    '</div>'+
-                                  '</div>'+ 
-                              '</div>'+
+                    
+                          let appList = ['Pending', 'Approved', 'Rejected'];
+                          let strOptions = '';
+                          appList.forEach((eachStatus) => {
+                                if(eachStatus == 'Approved')
+                                      strOptions += '<option selected value="'+eachStatus+'">'+eachStatus+'</option>';
+                                else
+                                      strOptions += '<option value="'+eachStatus+'">'+eachStatus+'</option>';
+                          })
 
-                              '<div class="form-group">'+
-                                  '<div class="row">'+
-                                    '<div class="col-md-6">'+
-                                      '<label for="natureOfExpense">Nature Of Expense</label>'+
-                                      '<input type="text" class="form-control" id="natureOfExpense" value="'+pettyCashRecord.nature_of_exp__c+'"   name="natureOfExpense" >'+
-                                    '</div>'+
-                                    
-                                    '<div class="col-md-6">'+
-                                    '<label for="amount">Amount</label>'+
-                                    '<input type="number" class="form-control" id="amount" value="'+pettyCashRecord.amount__c+'"   name="amount" >'+
-                                    '</div>'+
-                                  '</div>'+ 
-                              '</div>'+
-
-                              '<div class="form-group">'+
-                                  '<div class="row">'+
-                                      '<div class="col-md-6">'+
-                                        '<label for="description">Description</label>'+
-                                        '<textarea  class="form-control" id="description" value="'+pettyCashRecord.description_of_activity_expenses__c+'"  name="description" ></textarea>'+
-                                      '</div>'+
-                                  '</div>'+     
-                              '</div>'+
-                          
-
-                        $('#insideForm').empty();
-                        $('#insideForm').append(editFormHtml);
+                       //   document.form["editPettyCashForm"]["expenseName"].append(strOptions);
                           
                       })
                       .fail((jqXHR, status, error) => {
@@ -389,18 +380,38 @@
 
 
                 $('#editPettyCashButton').on('click', function(event){
+                    event.preventDefault();
                     event.stopPropagation();
                     event.stopImmediatePropagation();
                     alert('Save Button Clicked !');
+
+                    var $inputs = $('#editPettyCashForm :input');
+
+                    // not sure if you wanted this, but I thought I'd add it.
+                    // get an associative array of just the values.
+                    var values = {};
+                    $inputs.each(function() {
+                        values[this.name] = $(this).val();
+                    });
   
-                    $('#editPettyCashForm').submit(function(e){
-                        e.preventDefault();
-                        alert('formValues : ');
-                        let formValues = $(this).serialize();
-                        
+                   
+                    alert('formValues : '+JSON.stringify(values));
+
+                    $.ajax({
+                        url : '/expense/updatePettyCash',
+                        type:'post',
+                        data: values,
+                        dataType : 'json'
                     })
+                    .done((response) => {
+                          console.log('resonse   :'+response);
+                    })
+                    .fail((jqXHR, status, error) => {
+                          console.log('jqXHR  '+JSON.stringify(jqXHR));
+                    })
+                        
   
-                 });      
+                 })   
         }
     })
 </script>

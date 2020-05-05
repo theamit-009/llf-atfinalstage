@@ -860,4 +860,14 @@ router.get('/getpettycashDetail',verify,(request, response) => {
 })
 
 
+
+router.post('/updatePettyCash',(request, response) => {
+
+  let body = request.body;
+  console.log('body  : '+JSON.stringify(body));
+
+  response.send('Response Not Cleared !');
+})
+
+
 module.exports = router;
