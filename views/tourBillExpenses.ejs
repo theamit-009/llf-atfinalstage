@@ -188,7 +188,7 @@
           console.log('tourBillClaimId   '+tourBillClaimId);
           document.getElementById('tourBillId').innerHTML = tourBillClaimId;
 
-            $.ajax({
+          $.ajax({
               type: 'get',
               url : '/expense/tourBillClaim/getRelatedTourBillClaimDetails/'+tourBillClaimId,
               dataType : 'json',

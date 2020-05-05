@@ -87,9 +87,14 @@
                 </button>
               </div>
               <div id="editModalBody" class="modal-body">
-                  
+                  <form id="editPettyCashForm" >
+                      <div id="insideForm">
+
+                      </div>
+                  </form>
               </div>
               <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="editPettyCashButton" data-dismiss="modal">Save</button>
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
               </div>
             </div>
@@ -200,11 +205,25 @@
         })
 
 
+
+      function formatDate(date) {
+          var d = new Date(date),
+              month = '' + (d.getMonth() + 1),
+              day = '' + d.getDate(),
+              year = d.getFullYear();
+      
+          if (month.length < 2) 
+              month = '0' + month;
+          if (day.length < 2) 
+              day = '0' + day;
+      
+          return [year, month, day].join('-');
+      }
+
+
         function anchorClickFunctionalities()
         {
-
                 /*** View Functionality ***/
-
                 $('a.pettyCashTag').on('click',function(event){
                         event.stopImmediatePropagation();
                         event.stopPropagation();
@@ -265,8 +284,6 @@
                               $('#pettyCashDetailsTable').empty();
                               $('#pettyCashDetailsTable').html(htmlTable);
                             }
-
-                            
                      
                         })
                         .fail((jqXHR, status, error) =>{
@@ -301,15 +318,15 @@
                       .done((response) => {
                           console.log('pettyCashDetails  : '+JSON.stringify(response));
                           let pettyCashRecord = response[0];
-                          
+                          let billDate = formatDate(new Date(pettyCashRecord.bill_date__c));
+                          console.log('billDate  :  '+billDate);
                           
                           let editFormHtml = '';
-                          editFormHtml += '<form id="editPettyCashForm">'+
-                              '<div class="form-group">'+
+                          editFormHtml += '<div class="form-group">'+
                                   '<div class="row">'+
                                     '<div class="col-md-6">'+
                                       '<label for="pettyCashName">Name</label>'+
-                                      '<input type="text" class="form-control" id="pettyCashName" value="'+pettyCashRecord.pettycashname+'" placeholder="Task Name"  name="pettyCashName" required>'+
+                                      '<input type="text" disabled class="form-control" id="pettyCashName" value="'+pettyCashRecord.pettycashname+'" placeholder="Task Name"  name="pettyCashName" required>'+
                                     '</div>'+
                                     
                                     '<div class="col-md-6">'+
@@ -330,7 +347,7 @@
                                     
                                     '<div class="col-md-6">'+
                                     '<label for="billDate">Bill Date</label>'+
-                                      '<input type="date" class="form-control" id="billDate" value="'+pettyCashRecord.bill_date__c+'"   name="billDate" >'+
+                                      '<input type="date" class="form-control" id="billDate" value="'+billDate+'"   name="billDate" >'+
                                     '</div>'+
                                   '</div>'+ 
                               '</div>'+
@@ -351,20 +368,17 @@
 
                               '<div class="form-group">'+
                                   '<div class="row">'+
-                                    '<div class="col-md-6">'+
-                                      '<label for="description">Description</label>'+
-                                      '<textarea  class="form-control" id="description" value="'+pettyCashRecord.description_of_activity_expenses__c+'"  name="description" ></textarea>'+
-                                    '</div>'+
-                                    '</div>'+     
+                                      '<div class="col-md-6">'+
+                                        '<label for="description">Description</label>'+
+                                        '<textarea  class="form-control" id="description" value="'+pettyCashRecord.description_of_activity_expenses__c+'"  name="description" ></textarea>'+
+                                      '</div>'+
+                                  '</div>'+     
                               '</div>'+
-                          '</form>';
-
-                        $('#editModalBody').empty();
-                        $('#editModalBody').append(editFormHtml);
                           
 
-                       
-
+                        $('#insideForm').empty();
+                        $('#insideForm').append(editFormHtml);
+                          
                       })
                       .fail((jqXHR, status, error) => {
                           console.log('jqXHR   '+JSON.stringify(jqXHR));
@@ -373,7 +387,20 @@
 
                 });
 
-        }
 
+                $('#editPettyCashButton').on('click', function(event){
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                    alert('Save Button Clicked !');
+  
+                    $('#editPettyCashForm').submit(function(e){
+                        e.preventDefault();
+                        alert('formValues : ');
+                        let formValues = $(this).serialize();
+                        
+                    })
+  
+                 });      
+        }
     })
 </script>
